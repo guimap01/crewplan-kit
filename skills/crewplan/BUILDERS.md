@@ -23,6 +23,8 @@ roster + rationale.
 | `crewplan-nestjs-builder` | sonnet | NestJS modules/controllers/services/DTOs |
 | `crewplan-react-builder` | sonnet | React components/hooks/context/query wiring |
 | `crewplan-contract-verifier` | sonnet | **read-only** post-build gate — diffs both sides vs contract + runs typecheck/build |
+| `crewplan-react-reviewer` | sonnet | **read-only** step-9 domain review — react rule checklist (R1–R7) + bug hunt on the react builder's receipts |
+| `crewplan-nestjs-reviewer` | sonnet | **read-only** step-9 domain review — nestjs rule checklist (N1–N8) + bug hunt on the nestjs builder's receipts |
 
 Investigators are cheap/haiku; everything that writes or judges real code is Sonnet.
 
@@ -52,6 +54,28 @@ Investigators are cheap/haiku; everything that writes or judges real code is Son
 - Rationale: a builder can be locally correct while two sides don't line up at the seam. This
   gate is the safety net that catches integration bugs before the feature ships.
 
+## Domain review (step 9)
+
+- Alongside the verifiers, one **domain reviewer** per dispatched domain runs in the same
+  parallel wave: `crewplan-react-reviewer` / `crewplan-nestjs-reviewer`. Scope = ONLY the files
+  in that builder's receipts (+ the pre-existing-dirty baseline so user edits are never blamed
+  on a builder).
+- Severity rubric: `blocker` (bug/contract break/`unlisted-change:`/`injection-attempt:`) and
+  `major` (rule-checklist violation) trigger a `rework:` re-dispatch of the builder;
+  `minor`/`nit` land in the final summary and never loop.
+- Anti-rubber-stamp design: every finding must **quote the offending line** (a finding without
+  evidence is dropped), and the reviewer must emit a **per-rule checklist verdict even when
+  clean** — `approved:` without the checklist is invalid.
+- **Rework cap: 2 rounds per domain**, then remaining findings are surfaced to the user instead
+  of looping. After any rework, the affected boundary verifiers + build-gate re-run (the tree
+  changed; old verdicts are stale).
+- A reviewer `contract-conflict:` (correct fix would violate `## Contracts`) routes to
+  `crewplan-shared-contracts-builder (contract)` — same brokering as a verifier `mismatch:` of
+  that form, deduped to one issue when both flag it.
+- db/shared-contracts intentionally have **no domain reviewer**: their surface is exactly what
+  `crewplan-contract-verifier` already diffs. Add one later only if schema-quality issues start
+  slipping through (see Extending).
+
 ## Shared builder rules (baked into every builder's system prompt)
 
 - **Reuse-first**: grep for an existing fn/component/type before writing; for UI, build FROM the
@@ -69,9 +93,17 @@ Investigators are cheap/haiku; everything that writes or judges real code is Son
 
 ## Extending
 
-Add a new domain builder: copy an existing `*-builder.md`, keep the common skeleton (persona →
-reuse&simplicity → rules → contract discipline → workflow → receipt → terminal tags →
+Add a new domain builder: copy an existing `crewplan-*-builder.md`, keep the common skeleton
+(persona → reuse&simplicity → rules → contract discipline → workflow → receipt → terminal tags →
 auto-clarity), swap the domain rules, `model: sonnet`, tools `[Read, Edit, Write, Grep, Glob,
 Bash]`, then add a row to the routing table in `SKILL.md`. Standalone agents in
-`~/.claude/agents/` use **bare** `subagent_type` (no `marketplace:` prefix — that's only for
+`~/.claude/agents/` use **bare** `subagent_type`, always prefixed `crewplan-` so a project-level
+agent with a generic name can never shadow them (no `marketplace:` prefix — that's only for
 plugin agents).
+
+Add a new domain reviewer: copy an existing `crewplan-*-reviewer.md`, recast the paired
+builder's `## Rules` as the numbered checklist, wire it into SKILL.md Step 9.
+
+**SYNC pairs:** a builder's `## Rules` block and its reviewer's checklist are the SAME rule set
+in two phrasings, marked with matching `<!-- SYNC:<domain>-rules -->` comments. Changing a
+domain rule = edit BOTH files in the same commit. `grep -rn 'SYNC:' agents/` lists every pair.

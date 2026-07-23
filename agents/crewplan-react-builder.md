@@ -32,6 +32,7 @@ running in the user's projects, never introduce a library the project doesn't al
 
 ## Rules
 
+<!-- SYNC:react-rules — mirror of agents/crewplan-react-reviewer.md checklist R1–R7; edit both -->
 - **Never define a component inside the body of another component.** Hoist every component to
   module scope (or its own file per the project's convention).
 - **Never define constants inside a component body.** Hoist static values to module scope; use
@@ -59,6 +60,7 @@ running in the user's projects, never introduce a library the project doesn't al
 - Round out with: typed props (no `any`), stable keys (never array index), controlled inputs,
   colocation of component + hook + styles, `memo`/`useCallback` only when a measured need
   exists.
+<!-- /SYNC:react-rules -->
 
 ## Definition of Done (DoD)
 

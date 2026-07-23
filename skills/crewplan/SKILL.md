@@ -8,8 +8,10 @@ description: >
   plan to ~/.claude/plans/. After approval it dispatches Sonnet-tier domain builder
   agents (`crewplan-react-builder`, `crewplan-nestjs-builder`, `crewplan-shared-contracts-builder`, `crewplan-db-builder`)
   to execute the plan, owning the boundary contracts between them and brokering any
-  deviations, then runs a read-only `crewplan-contract-verifier` post-build gate to catch integration
-  mismatches early. Invoke only on an explicit /crewplan or an explicit request to run an
+  deviations, then runs a read-only post-build gate — `crewplan-contract-verifier` per boundary
+  plus `crewplan-react-reviewer` / `crewplan-nestjs-reviewer` domain reviews — to catch
+  integration mismatches and rule violations early. Invoke only on an explicit /crewplan or an
+  explicit request to run an
   orchestrated / multi-investigator plan — not on casual mentions of planning.
 trigger: /crewplan
 ---
@@ -93,27 +95,45 @@ judgment (decompose, synthesize, define contracts, broker deviations).
      letting one builder silently diverge — the orchestrator owns the contract, builders
      conform to it.
 
-9. **Verify contracts (post-build gate).** Even after every builder returns `status: done`, a
-   builder can be locally correct while two sides don't actually line up at the seam. So once
-   all builds are done, spawn the read-only **`crewplan-contract-verifier`** agent (bare `subagent_type`,
-   Sonnet) to check integration BEFORE declaring the feature complete:
-   - **One verifier per boundary, in PARALLEL** (read-only → no file conflict, unlike the
-     sequential builders). Each is handed one `## Contracts` entry + the owning/consuming
-     builder, and diffs both sides' real code field-by-field against it.
+9. **Verify contracts & review (post-build gate).** Even after every builder returns
+   `status: done`, a builder can be locally correct while two sides don't line up at the seam —
+   or the code works but violates the domain rules the builder was bound to. So once all builds
+   are done, spawn the read-only gate agents BEFORE declaring the feature complete — **all in
+   one message, in PARALLEL** (every gate agent is read-only → no file conflict, unlike the
+   sequential builders):
+   - **One `crewplan-contract-verifier` per boundary.** Each is handed one `## Contracts`
+     entry + the owning/consuming builder, and diffs both sides' real code field-by-field
+     against it.
    - **Plus one build-gate verifier** handed the whole-project typecheck/build (run once, not
      per boundary — avoid N redundant builds). Compare its result against the pre-dispatch
      baseline from Step 7: only failures NOT already in the baseline count as seam breaks —
      otherwise the broker loop chases pre-existing red it can never fix.
-   - Read the verdicts. `match: … ok` / `verified:` on every boundary + a green build → the
-     feature is integration-clean; present the final summary.
+   - **Plus one domain reviewer per dispatched domain**: `crewplan-react-reviewer` iff
+     `crewplan-react-builder` was dispatched, `crewplan-nestjs-reviewer` iff
+     `crewplan-nestjs-builder` was. Each reviewer's dispatch prompt carries (a) the exact
+     file list from that builder's receipts, (b) the relevant `## Contracts` entries, and
+     (c) the pre-existing-dirty baseline from Step 7 (so user edits are never blamed on a
+     builder). Reviewers enforce the domain rule checklist + hunt bugs, with quoted evidence
+     per finding.
+   - Read the verdicts. Green = every boundary `match:` + build green + every spawned
+     reviewer `approved:` → present the final summary.
    - Any `mismatch:` or `build-fail:` → feed it straight into the **Step 8 broker loop**: the
      verifier already names the `fix-owner` (a consumer builder, or `crewplan-shared-contracts-builder
      (contract)` when the baseline itself is wrong). Amend `## Contracts` if the contract was
      wrong, else re-dispatch the drifted builder to conform; then re-run the affected
      boundaries AND the build-gate (a fix can break an unrelated file no boundary covers).
-     Loop until the verifier returns all-clear.
-   - This is the safety net that catches integration bugs early — the whole reason for the
-     `## Contracts` baseline.
+   - Any reviewer `rework:` (blocker/major findings only — minor/nit go in the final summary,
+     never a loop) → re-dispatch that domain's builder with the quoted findings, then re-run
+     **that reviewer + the boundary verifiers touching its files + the build-gate** (rework
+     mutates the tree, so prior verdicts on touched boundaries are stale). **Cap: 2 rework
+     rounds per domain** — at the cap, stop and surface the remaining findings to the user
+     instead of looping.
+   - **Dedupe before brokering:** an issue flagged both as a verifier `mismatch:` and a
+     reviewer `blocker` is ONE issue — broker it once, via the contract path. A reviewer
+     `contract-conflict:` routes to `crewplan-shared-contracts-builder (contract)` exactly
+     like a verifier fix-owner of that form.
+   - This is the safety net that catches integration bugs and rule violations early — the
+     whole reason for the `## Contracts` baseline and the builder receipts.
 
 ## Builder routing table
 
@@ -130,9 +150,16 @@ Builders return a receipt ending in `status: done` or `deviation:`/`blocked:`/`a
 (the broker protocol in step 8). They are Sonnet-tier and write real code — only the
 investigators are haiku.
 
-`crewplan-contract-verifier` is NOT a domain builder — it is the read-only, Sonnet post-build gate
-(step 9). It writes nothing; it emits `match:` / `mismatch:` / `build-fail:` verdicts that
-feed back into the step-8 broker loop.
+### Step-9 read-only gate agents (NOT domain builders — they write nothing)
+
+| Gate agent                  | Verdict vocabulary                          | Role                                              |
+|-----------------------------|---------------------------------------------|---------------------------------------------------|
+| `crewplan-contract-verifier`| `match:` / `mismatch:` / `build-fail:`      | diffs both sides of a boundary vs `## Contracts`  |
+| `crewplan-react-reviewer`   | `approved:` / `rework:` + severity findings | react rule checklist (R1–R7) + bug hunt on receipts |
+| `crewplan-nestjs-reviewer`  | `approved:` / `rework:` + severity findings | nestjs rule checklist (N1–N8) + bug hunt on receipts |
+
+All Sonnet, all read-only, all safe to spawn in one parallel wave; their verdicts feed back
+into the step-8 broker loop (with the step-9 dedupe rule and the 2-round rework cap).
 
 ## Rules
 
@@ -151,8 +178,8 @@ feed back into the step-8 broker loop.
   contracts couple them, so there is little to parallelize. Do NOT dispatch two file-writing
   builders concurrently: the Agent tool's `isolation: worktree` gives each agent its own
   worktree but does NOT merge changes back to the main tree (it is auto-cleaned if unchanged),
-  so parallel builder edits would be stranded and lost. The read-only verifiers in Step 9 are
-  the only agents safe to run in parallel.
+  so parallel builder edits would be stranded and lost. The read-only Step-9 gate agents
+  (verifiers + reviewers) are the only agents safe to run in parallel.
 - The orchestrator owns the contract. On any `deviation:`, amend `## Contracts` and
   re-dispatch — never let a builder silently diverge from a named contract.
 - If spawning any `crewplan-*` agent fails with an unknown-agent error, STOP — the installed

@@ -31,6 +31,7 @@ introduce a library the project doesn't already depend on.
 
 ## Rules
 
+<!-- SYNC:nestjs-rules — mirror of agents/crewplan-nestjs-reviewer.md checklist N1–N8; edit both -->
 - **Feature-module boundaries**: explicit `imports` / `providers` / `exports`. No reaching into
   another module's internals — depend on its exported providers.
 - **Constructor DI only.** Never `new` a provider; inject it. Everything injectable is a
@@ -48,6 +49,7 @@ introduce a library the project doesn't already depend on.
 - **Return DTOs, not entities** — serialize via `class-transformer`/interceptor so persistence
   shapes don't leak over the wire.
 - **Consume shared-contracts types** for request/response shapes; import them, never redefine.
+<!-- /SYNC:nestjs-rules -->
 
 ## Definition of Done (DoD)
 

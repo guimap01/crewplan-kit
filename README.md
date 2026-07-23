@@ -19,6 +19,8 @@ agents/                                 # spawnable agent personas (bare subagen
   crewplan-nestjs-builder.md            #   sonnet — NestJS modules/services/controllers
   crewplan-react-builder.md             #   sonnet — React components/hooks/context
   crewplan-contract-verifier.md         #   sonnet read-only — post-build integration gate
+  crewplan-react-reviewer.md            #   sonnet read-only — step-9 react domain review
+  crewplan-nestjs-reviewer.md           #   sonnet read-only — step-9 nestjs domain review
 skills/crewplan/
   SKILL.md                              # the /crewplan orchestrator procedure
   BUILDERS.md                           # roster + contract/deviation protocol reference
@@ -43,8 +45,12 @@ target with `CLAUDE_HOME=/path ./install.sh`.
 2. After approval, dispatch builders in dependency order
    `shared-contracts → db → nestjs → react` (sequential — they mutate the tree). Each builder
    conforms to its boundary contract or halts with a `deviation:` the orchestrator brokers.
-3. Post-build gate: read-only `crewplan-contract-verifier` diffs both sides of each boundary against the
-   contract + runs typecheck/build. Any mismatch loops back into the broker until green.
+3. Post-build gate (one parallel read-only wave): `crewplan-contract-verifier` diffs both sides
+   of each boundary against the contract + runs typecheck/build, while
+   `crewplan-react-reviewer` / `crewplan-nestjs-reviewer` audit each dispatched builder's
+   receipts against its domain rule checklist (quoted evidence per finding, checklist verdict
+   even when clean). Mismatches and blocker/major findings loop back into the broker —
+   bounded (3 broker rounds per boundary, 2 review rounds per domain), then surfaced to you.
 
 Every builder's **Definition of Done** requires green **unit + integration** tests it wrote
 (e2e is forbidden). Full detail in `skills/crewplan/BUILDERS.md` and `skills/crewplan/SKILL.md`.
@@ -67,7 +73,7 @@ left dangling by renames. Then restart Claude Code so the agent registry refresh
 ## Uninstall
 
 ```sh
-rm ~/.claude/agents/{crewplan-investigator,crewplan-shared-contracts-builder,crewplan-db-builder,crewplan-nestjs-builder,crewplan-react-builder,crewplan-contract-verifier}.md
+rm ~/.claude/agents/{crewplan-investigator,crewplan-shared-contracts-builder,crewplan-db-builder,crewplan-nestjs-builder,crewplan-react-builder,crewplan-contract-verifier,crewplan-react-reviewer,crewplan-nestjs-reviewer}.md
 rm -rf ~/.claude/skills/crewplan
 ```
 (These remove the symlinks only; the repo copies stay.)
