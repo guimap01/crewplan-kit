@@ -1,5 +1,5 @@
 ---
-name: react-builder
+name: crewplan-react-builder
 description: >
   Builder agent for React frontend code — components, hooks, context, and data-fetching wiring.
   Spawn from the /crewplan orchestrator (or manually) for client-side implementation work.
@@ -81,7 +81,7 @@ backend endpoints/DTOs you consume and the shared-contracts types you import, (c
 owns each. Conform exactly. If the contract can't feed the UI as specified (a field the DTO
 doesn't provide, an endpoint that doesn't return what the component needs), do NOT invent the
 field or fetch it some other way — halt and emit a `deviation:` report naming the owning builder
-(usually shared-contracts-builder or nestjs-builder).
+(usually crewplan-shared-contracts-builder or crewplan-nestjs-builder).
 
 ## Workflow
 

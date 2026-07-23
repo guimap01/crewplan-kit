@@ -6,9 +6,9 @@ description: >
   subagents (read-only, caveman-compressed, one task each), then the orchestrator
   (the default powerful model) aggregates findings and writes a caveman-compressed
   plan to ~/.claude/plans/. After approval it dispatches Sonnet-tier domain builder
-  agents (`react-builder`, `nestjs-builder`, `shared-contracts-builder`, `db-builder`)
+  agents (`crewplan-react-builder`, `crewplan-nestjs-builder`, `crewplan-shared-contracts-builder`, `crewplan-db-builder`)
   to execute the plan, owning the boundary contracts between them and brokering any
-  deviations, then runs a read-only `contract-verifier` post-build gate to catch integration
+  deviations, then runs a read-only `crewplan-contract-verifier` post-build gate to catch integration
   mismatches early. Invoke only on an explicit /crewplan or an explicit request to run an
   orchestrated / multi-investigator plan — not on casual mentions of planning.
 trigger: /crewplan
@@ -21,7 +21,7 @@ Decompose → delegate investigation to cheap haiku subagents → synthesize a p
 (after approval) dispatch domain builder agents to execute it, brokering the contracts
 between them → verify integration with a read-only post-build gate. You do NOT investigate
 code inline and you do NOT write build code inline — every lookup goes to an investigator,
-every build goes to a builder, every integration check goes to the contract-verifier. That
+every build goes to a builder, every integration check goes to the crewplan-contract-verifier. That
 is the whole point: keep main context lean, spend the expensive orchestrator model only on
 judgment (decompose, synthesize, define contracts, broker deviations).
 
@@ -70,7 +70,7 @@ judgment (decompose, synthesize, define contracts, broker deviations).
 
 7. **Dispatch to builders.** Once the plan is approved, execute the build steps by spawning
    the matching **builder agent** per the routing table — each via **bare** `subagent_type`
-   (`react-builder`, `nestjs-builder`, `shared-contracts-builder`, `db-builder`; NOT
+   (`crewplan-react-builder`, `crewplan-nestjs-builder`, `crewplan-shared-contracts-builder`, `crewplan-db-builder`; NOT
    namespaced). Dispatch in **dependency order**: `shared-contracts → db → nestjs → react`
    (types first, UI consumer last). Each dispatch prompt carries three things: the scoped
    task, the exact **boundary contract** from `## Contracts`, and the owning-builder map so
@@ -85,7 +85,7 @@ judgment (decompose, synthesize, define contracts, broker deviations).
 8. **Broker deviations.** If a builder returns a `deviation:` (or `blocked:`/`ambiguous:`)
    instead of `status: done`:
    - Route the contract change to the **owning** builder named in the deviation — a shape
-     shared across FE/BE goes to `shared-contracts-builder` first.
+     shared across FE/BE goes to `crewplan-shared-contracts-builder` first.
    - Update the `## Contracts` section in the plan file to the amended shape.
    - Re-dispatch the affected builders (the ones named in `affects:`) with the amended
      contract as context.
@@ -95,7 +95,7 @@ judgment (decompose, synthesize, define contracts, broker deviations).
 
 9. **Verify contracts (post-build gate).** Even after every builder returns `status: done`, a
    builder can be locally correct while two sides don't actually line up at the seam. So once
-   all builds are done, spawn the read-only **`contract-verifier`** agent (bare `subagent_type`,
+   all builds are done, spawn the read-only **`crewplan-contract-verifier`** agent (bare `subagent_type`,
    Sonnet) to check integration BEFORE declaring the feature complete:
    - **One verifier per boundary, in PARALLEL** (read-only → no file conflict, unlike the
      sequential builders). Each is handed one `## Contracts` entry + the owning/consuming
@@ -107,7 +107,7 @@ judgment (decompose, synthesize, define contracts, broker deviations).
    - Read the verdicts. `match: … ok` / `verified:` on every boundary + a green build → the
      feature is integration-clean; present the final summary.
    - Any `mismatch:` or `build-fail:` → feed it straight into the **Step 8 broker loop**: the
-     verifier already names the `fix-owner` (a consumer builder, or `shared-contracts-builder
+     verifier already names the `fix-owner` (a consumer builder, or `crewplan-shared-contracts-builder
      (contract)` when the baseline itself is wrong). Amend `## Contracts` if the contract was
      wrong, else re-dispatch the drifted builder to conform; then re-run the affected
      boundaries AND the build-gate (a fix can break an unrelated file no boundary covers).
@@ -121,16 +121,16 @@ Pick the builder by the domain of the build step (all spawned with **bare** `sub
 
 | Build step domain                                   | Builder                     |
 |-----------------------------------------------------|-----------------------------|
-| Shared TS types / DTOs / GraphQL SDL (FE↔BE)        | `shared-contracts-builder`  |
-| DB schema / entities / migrations / repositories    | `db-builder`                |
-| NestJS modules / controllers / services / DTOs      | `nestjs-builder`            |
-| React components / hooks / context / query wiring   | `react-builder`             |
+| Shared TS types / DTOs / GraphQL SDL (FE↔BE)        | `crewplan-shared-contracts-builder`  |
+| DB schema / entities / migrations / repositories    | `crewplan-db-builder`                |
+| NestJS modules / controllers / services / DTOs      | `crewplan-nestjs-builder`            |
+| React components / hooks / context / query wiring   | `crewplan-react-builder`             |
 
 Builders return a receipt ending in `status: done` or `deviation:`/`blocked:`/`ambiguous:`
 (the broker protocol in step 8). They are Sonnet-tier and write real code — only the
 investigators are haiku.
 
-`contract-verifier` is NOT a domain builder — it is the read-only, Sonnet post-build gate
+`crewplan-contract-verifier` is NOT a domain builder — it is the read-only, Sonnet post-build gate
 (step 9). It writes nothing; it emits `match:` / `mismatch:` / `build-fail:` verdicts that
 feed back into the step-8 broker loop.
 
@@ -155,6 +155,9 @@ feed back into the step-8 broker loop.
   the only agents safe to run in parallel.
 - The orchestrator owns the contract. On any `deviation:`, amend `## Contracts` and
   re-dispatch — never let a builder silently diverge from a named contract.
+- If spawning any `crewplan-*` agent fails with an unknown-agent error, STOP — the installed
+  symlinks are out of sync with the kit repo. Tell the user to re-run `~/crewplan-kit/install.sh`
+  and restart the session; do not substitute a different agent type.
 
 ## Why this shape
 

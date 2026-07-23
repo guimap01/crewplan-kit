@@ -5,24 +5,24 @@ cheap read-only investigators, then dispatches specialist builder agents to exec
 owning the contracts between them and gating on a post-build integration check.
 
 Version-controlled here so it survives machine changes; symlinked into `~/.claude/` so it runs
-live. **Standalone agents use bare `subagent_type`** (`react-builder`, not `plugin:react-builder`)
+live. **Standalone agents use bare `subagent_type`** (`crewplan-react-builder`, not `plugin:crewplan-react-builder`)
 — this is a dotfiles repo, **not** a Claude plugin, so the bare names the skill dispatches keep
 working unchanged.
 
 ## Layout
 
 ```
-agents/                          # spawnable agent personas (bare subagent_type)
-  crewplan-investigator.md       #   haiku read-only locator (planning phase)
-  shared-contracts-builder.md    #   sonnet — FE↔BE types/DTO/GraphQL (contract authority)
-  db-builder.md                  #   sonnet — ORM schema/migrations/repositories
-  nestjs-builder.md              #   sonnet — NestJS modules/services/controllers
-  react-builder.md               #   sonnet — React components/hooks/context
-  contract-verifier.md           #   sonnet read-only — post-build integration gate
+agents/                                 # spawnable agent personas (bare subagent_type)
+  crewplan-investigator.md              #   haiku read-only locator (planning phase)
+  crewplan-shared-contracts-builder.md  #   sonnet — FE↔BE types/DTO/GraphQL (contract authority)
+  crewplan-db-builder.md                #   sonnet — ORM schema/migrations/repositories
+  crewplan-nestjs-builder.md            #   sonnet — NestJS modules/services/controllers
+  crewplan-react-builder.md             #   sonnet — React components/hooks/context
+  crewplan-contract-verifier.md         #   sonnet read-only — post-build integration gate
 skills/crewplan/
-  SKILL.md                       # the /crewplan orchestrator procedure
-  BUILDERS.md                    # roster + contract/deviation protocol reference
-install.sh                       # symlinks the above into ~/.claude/
+  SKILL.md                              # the /crewplan orchestrator procedure
+  BUILDERS.md                           # roster + contract/deviation protocol reference
+install.sh                              # symlinks the above into ~/.claude/
 ```
 
 ## Install
@@ -43,7 +43,7 @@ target with `CLAUDE_HOME=/path ./install.sh`.
 2. After approval, dispatch builders in dependency order
    `shared-contracts → db → nestjs → react` (sequential — they mutate the tree). Each builder
    conforms to its boundary contract or halts with a `deviation:` the orchestrator brokers.
-3. Post-build gate: read-only `contract-verifier` diffs both sides of each boundary against the
+3. Post-build gate: read-only `crewplan-contract-verifier` diffs both sides of each boundary against the
    contract + runs typecheck/build. Any mismatch loops back into the broker until green.
 
 Every builder's **Definition of Done** requires green **unit + integration** tests it wrote
@@ -52,12 +52,22 @@ Every builder's **Definition of Done** requires green **unit + integration** tes
 ## Updating
 
 The installed files are symlinks, so edits to files in this repo are live immediately. After
-editing, `git commit` + `git push` to save. Pull on another machine + re-run `./install.sh`.
+editing, `git commit` + `git push` to save. **Always re-run `./install.sh` after pulling** — a
+pull can rename or add agent files, and the installer both links new ones and prunes symlinks
+left dangling by renames. Then restart Claude Code so the agent registry refreshes.
+
+### Troubleshooting
+
+- **Moved the repo?** Old symlinks point at the previous path and the pruner only recognizes
+  links into the *current* repo dir — delete stale `crewplan-*` links in `~/.claude/agents/`
+  manually, then re-run `./install.sh`.
+- **`/crewplan` reports an unknown `crewplan-*` agent?** The repo and the installed links are
+  out of sync — re-run `./install.sh` and restart the session.
 
 ## Uninstall
 
 ```sh
-rm ~/.claude/agents/{crewplan-investigator,shared-contracts-builder,db-builder,nestjs-builder,react-builder,contract-verifier}.md
+rm ~/.claude/agents/{crewplan-investigator,crewplan-shared-contracts-builder,crewplan-db-builder,crewplan-nestjs-builder,crewplan-react-builder,crewplan-contract-verifier}.md
 rm -rf ~/.claude/skills/crewplan
 ```
 (These remove the symlinks only; the repo copies stay.)

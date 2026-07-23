@@ -1,5 +1,5 @@
 ---
-name: db-builder
+name: crewplan-db-builder
 description: >
   Builder agent for the persistence/ORM layer of a Node/NestJS backend — schema/entities,
   migrations, indexes, relations, and typed data-access methods. Detects the project's ORM
@@ -60,7 +60,7 @@ If you cannot get the suite green within your scope, do NOT claim `status: done`
 
 The orchestrator gives you (a) your scoped task, (b) the contract at your boundary — the
 persistence shapes to store and the typed methods/return shapes to expose, (c) which builder
-consumes them (usually nestjs-builder). Conform exactly. If the contract can't be persisted
+consumes them (usually crewplan-nestjs-builder). Conform exactly. If the contract can't be persisted
 soundly (e.g. a required field with no source, an impossible relation, a shape the schema can't
 represent), do NOT improvise a divergent schema — halt and emit a `deviation:` report.
 

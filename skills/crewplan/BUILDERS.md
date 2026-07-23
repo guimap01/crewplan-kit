@@ -1,7 +1,7 @@
 # crewplan builders + contract verification — reference
 
 > Lazy reference for the crewplan build/verify layer. NOT auto-loaded into any session —
-> read it when working on crewplan, the builder agents, or the contract-verifier. Kept here
+> read it when working on crewplan, the builder agents, or the crewplan-contract-verifier. Kept here
 > (next to `SKILL.md`) rather than in any project's memory index on purpose: this tooling is
 > global and unrelated to any single repo, so it must never clutter per-project sessions.
 
@@ -18,11 +18,11 @@ roster + rationale.
 | Agent | Model | Role |
 |---|---|---|
 | `crewplan-investigator` | haiku | read-only locator, one question per spawn (planning phase) |
-| `shared-contracts-builder` | sonnet | **contract authority** — shared TS types/DTO/GraphQL, no logic |
-| `db-builder` | sonnet | ORM schema/entities/migrations/repositories |
-| `nestjs-builder` | sonnet | NestJS modules/controllers/services/DTOs |
-| `react-builder` | sonnet | React components/hooks/context/query wiring |
-| `contract-verifier` | sonnet | **read-only** post-build gate — diffs both sides vs contract + runs typecheck/build |
+| `crewplan-shared-contracts-builder` | sonnet | **contract authority** — shared TS types/DTO/GraphQL, no logic |
+| `crewplan-db-builder` | sonnet | ORM schema/entities/migrations/repositories |
+| `crewplan-nestjs-builder` | sonnet | NestJS modules/controllers/services/DTOs |
+| `crewplan-react-builder` | sonnet | React components/hooks/context/query wiring |
+| `crewplan-contract-verifier` | sonnet | **read-only** post-build gate — diffs both sides vs contract + runs typecheck/build |
 
 Investigators are cheap/haiku; everything that writes or judges real code is Sonnet.
 
@@ -37,16 +37,16 @@ Investigators are cheap/haiku; everything that writes or judges real code is Son
   `deviation: <what> | reason | need + owning-builder | affects: <consumers>`. Also
   `blocked:` / `ambiguous:`.
 - **Broker loop (step 8):** on any `deviation:`, route the change to the owning builder
-  (cross-FE/BE shapes → `shared-contracts-builder` first), amend `## Contracts`, re-dispatch the
+  (cross-FE/BE shapes → `crewplan-shared-contracts-builder` first), amend `## Contracts`, re-dispatch the
   `affects:` builders, loop until all `status: done`.
 
 ## Post-build verification (step 9)
 
-- After every builder is `status: done`, spawn `contract-verifier` — **one per boundary in
+- After every builder is `status: done`, spawn `crewplan-contract-verifier` — **one per boundary in
   parallel** (read-only, no conflict) + **one build-gate** verifier that runs the project
   typecheck/build once.
 - Verifier emits `match:` / `mismatch:` / `build-fail:` with a named `fix-owner`
-  (`shared-contracts-builder (contract)` when the baseline itself is wrong).
+  (`crewplan-shared-contracts-builder (contract)` when the baseline itself is wrong).
 - Any non-match feeds back into the step-8 broker loop, then re-verify the affected boundaries.
   Loop until `verified: all boundaries match, build green`.
 - Rationale: a builder can be locally correct while two sides don't line up at the seam. This
@@ -64,8 +64,8 @@ Investigators are cheap/haiku; everything that writes or judges real code is Son
   terminal status tag; self-verify via Bash (typecheck/lint/test) before returning.
 - **Definition of Done**: `status: done` requires green **unit + integration** tests the
   builder wrote/extended for its work, plus typecheck/lint. **E2E is forbidden** — builders
-  never write/run/scaffold it. shared-contracts-builder's DoD is type-shaped (typecheck green +
-  schema unit tests; its "integration" is consumers compiling, checked by `contract-verifier`).
+  never write/run/scaffold it. crewplan-shared-contracts-builder's DoD is type-shaped (typecheck green +
+  schema unit tests; its "integration" is consumers compiling, checked by `crewplan-contract-verifier`).
 
 ## Extending
 
