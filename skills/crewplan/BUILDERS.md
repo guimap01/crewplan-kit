@@ -40,7 +40,9 @@ Investigators are cheap/haiku; everything that writes or judges real code is Son
   `blocked:` / `ambiguous:`.
 - **Broker loop (step 8):** on any `deviation:`, route the change to the owning builder
   (cross-FE/BE shapes → `crewplan-shared-contracts-builder` first), amend `## Contracts`, re-dispatch the
-  `affects:` builders, loop until all `status: done`.
+  `affects:` builders, loop until all `status: done` — **capped at 3 broker rounds per
+  boundary** (counted in the plan's `## Progress`); at the cap, surface the remaining
+  mismatch to the user instead of looping.
 
 ## Post-build verification (step 9)
 
