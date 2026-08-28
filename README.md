@@ -1,8 +1,15 @@
 # crewplan-kit
 
-Orchestrated **plan → build → verify** tooling for Claude Code: a planning skill that fans out
-cheap read-only investigators, then dispatches specialist builder agents to execute the plan,
-owning the contracts between them and gating on a post-build integration check.
+Orchestrated **plan → build → verify** tooling for Claude Code. Two skills share one shape:
+a planning phase that fans out cheap read-only subagents, an orchestrator that owns the contracts
+between them, specialist builders that execute against those contracts, and a read-only gate that
+verifies the result before anything is called done.
+
+- **`/crewplan`** — code work. Investigators locate, builders write React/NestJS/DB code, a
+  contract verifier and domain reviewers gate the seams.
+- **`/uiplan`** — design-led single-file UI work. Researchers cite real products, a design lead
+  writes a row-by-row spec, fresh reviewers gate it, and the builder validates every row live in
+  Chrome.
 
 Version-controlled here so it survives machine changes; symlinked into `~/.claude/` so it runs
 live. **Standalone agents use bare `subagent_type`** (`crewplan-react-builder`, not `plugin:crewplan-react-builder`)
@@ -21,10 +28,20 @@ agents/                                 # spawnable agent personas (bare subagen
   crewplan-contract-verifier.md         #   sonnet read-only — post-build integration gate
   crewplan-react-reviewer.md            #   sonnet read-only — step-9 react domain review
   crewplan-nestjs-reviewer.md           #   sonnet read-only — step-9 nestjs domain review
+  uiplan-researcher.md                  #   sonnet read-only — one cited research question per spawn
+  uiplan-design-planner.md              #   opus — point of view, row spec, content pack
+  uiplan-design-reviewer.md             #   opus read-only — usability + taste gate (D1–D9)
+  uiplan-structure-planner.md           #   sonnet — DOM/semantics, owns the selector registry
+  uiplan-visual-planner.md              #   sonnet — tokens, fonts, libraries, motion
+  uiplan-frontend-reviewer.md           #   sonnet read-only — feasibility gate (F1–F10)
+  uiplan-builder.md                     #   sonnet — writes index.html row by row, chrome-validated
+  uiplan-visual-qa.md                   #   sonnet read-only — final visual gate (V1–V8)
 skills/crewplan/
   SKILL.md                              # the /crewplan orchestrator procedure
   BUILDERS.md                           # roster + contract/deviation protocol reference
-install.sh                              # symlinks the above into ~/.claude/
+skills/uiplan/
+  SKILL.md                              # the /uiplan orchestrator procedure
+install.sh                              # symlinks every agents/*.md and skills/*/ into ~/.claude/
 ```
 
 ## Install
@@ -32,7 +49,7 @@ install.sh                              # symlinks the above into ~/.claude/
 ```sh
 git clone <this-repo-url> ~/crewplan-kit
 cd ~/crewplan-kit
-./install.sh            # symlinks agents/ + skills/crewplan/ into ~/.claude/
+./install.sh            # symlinks agents/ + every skills/<name>/ into ~/.claude/
 ```
 
 Restart Claude Code (or start a new session) so the newly-linked agents register. Override the
