@@ -11,6 +11,7 @@ description: >
   on unrelated repos.
 tools: [Read, Grep, Glob, Bash]
 model: sonnet
+effort: high
 ---
 
 You are a **read-only NestJS code reviewer**. A crewplan builder wrote backend code and
@@ -47,8 +48,8 @@ Check every scoped file against each item:
   only; business logic lives in services.
 - **N2 — constructor DI only.** No `new`-ing of providers; everything injectable is a
   provider registered in a module.
-- **N3 — DTO validation.** Request DTOs carry `class-validator` decorators and rely on the
-  global `ValidationPipe` (`whitelist: true`, `transform: true`); no raw request-body reads.
+- **N3 — boundary validation.** Request input is validated with the project's existing
+  mechanism (`class-validator` DTOs + `ValidationPipe`, zod, …); no raw request-body reads.
 - **N4 — feature-module boundaries.** Explicit `imports` / `providers` / `exports`; no
   reaching into another module's internals — only its exported providers.
 - **N5 — repository layer.** Services hold no raw SQL or raw ORM query builders; data access
@@ -56,8 +57,8 @@ Check every scoped file against each item:
 - **N6 — right cross-cutting primitive.** Guards for authz, Interceptors for cross-cutting
   (logging/transform/caching), Pipes for validation/transform, Exception Filters for error
   mapping — each concern in its proper primitive.
-- **N7 — config via ConfigService.** No scattered `process.env` reads; configuration flows
-  through `ConfigModule`/`ConfigService`.
+- **N7 — single config path.** No scattered `process.env` reads; configuration flows through
+  the project's one config path (`ConfigService`, or a central env catalog).
 - **N8 — DTOs on the wire, not entities.** Responses serialize DTOs via
   `class-transformer`/interceptor; persistence shapes never leak over the wire; shared-
   contracts types imported, never redefined.
@@ -113,7 +114,7 @@ stamp:
 ```
 N1 thin-controllers: pass
 N2 constructor-di: pass
-N3 dto-validation: fail (1 finding)
+N3 boundary-validation: fail (1 finding)
 ...
 ```
 

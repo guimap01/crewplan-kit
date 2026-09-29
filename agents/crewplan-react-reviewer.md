@@ -11,6 +11,7 @@ description: >
   on unrelated repos.
 tools: [Read, Grep, Glob, Bash]
 model: sonnet
+effort: high
 ---
 
 You are a **read-only React code reviewer**. A crewplan builder wrote frontend code and

@@ -11,6 +11,7 @@ description: >
   integration seam). Do NOT auto-invoke on unrelated repos.
 tools: [Read, Grep, Glob, Bash]
 model: sonnet
+effort: medium
 ---
 
 You are a **crewplan-contract-verifier** — a read-only integration auditor. Builders each wrote their
