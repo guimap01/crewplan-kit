@@ -15,26 +15,37 @@ roster + rationale.
 
 ## Agent roster (all in `~/.claude/agents/`, bare `subagent_type`)
 
-| Agent | Model | Role |
+| Agent | Model · effort | Role |
 |---|---|---|
-| `crewplan-investigator` | haiku | read-only locator, one question per spawn (planning phase) |
-| `crewplan-shared-contracts-builder` | sonnet | **contract authority** — shared TS types/DTO/GraphQL, no logic |
-| `crewplan-db-builder` | sonnet | ORM schema/entities/migrations/repositories |
-| `crewplan-nestjs-builder` | sonnet | NestJS modules/controllers/services/DTOs |
-| `crewplan-react-builder` | sonnet | React components/hooks/context/query wiring |
-| `crewplan-contract-verifier` | sonnet | **read-only** post-build gate — diffs both sides vs contract + runs typecheck/build |
-| `crewplan-react-reviewer` | sonnet | **read-only** step-9 domain review — react rule checklist (R1–R7) + bug hunt on the react builder's receipts |
-| `crewplan-nestjs-reviewer` | sonnet | **read-only** step-9 domain review — nestjs rule checklist (N1–N8) + bug hunt on the nestjs builder's receipts |
+| `crewplan-investigator` | haiku · — | read-only locator, one question per spawn (planning phase) |
+| `crewplan-shared-contracts-builder` | sonnet · medium | **contract authority** — shared TS types/DTO/GraphQL, no logic |
+| `crewplan-db-builder` | sonnet · medium | ORM schema/entities/migrations/repositories |
+| `crewplan-nestjs-builder` | sonnet · medium | NestJS modules/controllers/services/DTOs |
+| `crewplan-react-builder` | sonnet · medium | React components/hooks/context/query wiring |
+| `crewplan-contract-verifier` | sonnet · medium | **read-only** post-build gate — diffs both sides vs contract + runs typecheck/build |
+| `crewplan-react-reviewer` | sonnet · high | **read-only** step-9 domain review — react rule checklist (R1–R7) + bug hunt on the react builder's receipts |
+| `crewplan-nestjs-reviewer` | sonnet · high | **read-only** step-9 domain review — nestjs rule checklist (N1–N8) + bug hunt on the nestjs builder's receipts |
 
-Investigators are cheap/haiku; everything that writes or judges real code is Sonnet.
+Investigators are cheap/haiku; everything that writes or judges real code is Sonnet. `sonnet`
+and `haiku` are aliases that follow each new release, so there is no version to bump. `effort`
+is set explicitly because each Sonnet release recalibrates what a level means: builders and the
+verifier start at `medium` (the documented starting point for agentic coding), reviewers at
+`high` (bug-hunting is the judgment-heavy step). Re-check these when a new Sonnet ships. The
+haiku investigator sets no `effort` — Haiku 4.5 doesn't take one.
+
+The builders' Definition of Done rejects a check that never exercised the change (syntax-only,
+or a command that failed to start). Current Sonnet models can report work done without a real
+check at lower effort; that clause, plus the orchestrator's quoted-`verified:` receipt rule, is
+the guard.
 
 ## The contract protocol (the glue)
 
 - The orchestrator writes a `## Contracts` section in the plan BEFORE dispatch: each boundary's
   exact shape/endpoint + which builder OWNS it vs CONSUMES it. This is the diff baseline.
 - Dispatch order = **dependency order**: `shared-contracts → db → nestjs → react` (types first,
-  UI last). Builders run **sequentially** by default (they mutate files, contracts couple them);
-  parallelize only independent steps and only with `isolation: worktree`.
+  UI last). Builders always run **sequentially**: they mutate the tree and contracts couple them,
+  and `isolation: worktree` does not merge an agent's changes back, so parallel builder edits
+  would be lost.
 - A builder that can't meet its contract does NOT improvise — it halts and returns
   `deviation: <what> | reason | need + owning-builder | affects: <consumers>`. Also
   `blocked:` / `ambiguous:`.
@@ -97,8 +108,8 @@ Investigators are cheap/haiku; everything that writes or judges real code is Son
 
 Add a new domain builder: copy an existing `crewplan-*-builder.md`, keep the common skeleton
 (persona → reuse&simplicity → rules → contract discipline → workflow → receipt → terminal tags →
-auto-clarity), swap the domain rules, `model: sonnet`, tools `[Read, Edit, Write, Grep, Glob,
-Bash]`, then add a row to the routing table in `SKILL.md`. Standalone agents in
+auto-clarity), swap the domain rules, `model: sonnet`, `effort: medium`, tools `[Read, Edit,
+Write, Grep, Glob, Bash]`, then add a row to the routing table in `SKILL.md`. Standalone agents in
 `~/.claude/agents/` use **bare** `subagent_type`, always prefixed `crewplan-` so a project-level
 agent with a generic name can never shadow them (no `marketplace:` prefix — that's only for
 plugin agents).

@@ -209,6 +209,8 @@ into the step-8 broker loop (with the step-9 dedupe rule and the 2-round rework 
   (verifiers + reviewers) are the only agents safe to run in parallel.
 - The orchestrator owns the contract. On any `deviation:`, amend `## Contracts` and
   re-dispatch — never let a builder silently diverge from a named contract.
+- Never pass `model` on a `crewplan-*` spawn: the Agent tool's `model` overrides the
+  definition, and each definition pins its tier and `effort` on purpose (see `BUILDERS.md`).
 - If spawning any `crewplan-*` agent fails with an unknown-agent error, STOP — the installed
   symlinks are out of sync with the kit repo. Tell the user to re-run `~/crewplan-kit/install.sh`
   and restart the session; do not substitute a different agent type.
