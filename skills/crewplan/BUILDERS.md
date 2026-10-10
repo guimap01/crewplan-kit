@@ -31,7 +31,8 @@ and `haiku` are aliases that follow each new release, so there is no version to 
 is set explicitly because each Sonnet release recalibrates what a level means: builders and the
 verifier start at `medium` (the documented starting point for agentic coding), reviewers at
 `high` (bug-hunting is the judgment-heavy step). Re-check these when a new Sonnet ships. The
-haiku investigator sets no `effort` — Haiku 4.5 doesn't take one.
+haiku investigator sets no `effort` — it runs at the Haiku default (`medium` on Haiku 5.5), which
+is enough for a read-only locator.
 
 The builders' Definition of Done rejects a check that never exercised the change (syntax-only,
 or a command that failed to start). Current Sonnet models can report work done without a real
