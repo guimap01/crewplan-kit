@@ -18,6 +18,7 @@ roster + rationale.
 | Agent | Model · effort | Role |
 |---|---|---|
 | `crewplan-investigator` | haiku · — | read-only locator, one question per spawn (planning phase) |
+| `crewplan-web-researcher` | sonnet · medium | read-only online researcher, one question per spawn (planning phase, mandatory wave): live docs vs pinned version, community fixes, prior art — every row cites `[src: url · date]` |
 | `crewplan-shared-contracts-builder` | sonnet · medium | **contract authority** — shared TS types/DTO/GraphQL, no logic |
 | `crewplan-db-builder` | sonnet · medium | ORM schema/entities/migrations/repositories |
 | `crewplan-nestjs-builder` | sonnet · medium | NestJS modules/controllers/services/DTOs |
@@ -26,12 +27,15 @@ roster + rationale.
 | `crewplan-react-reviewer` | sonnet · high | **read-only** step-9 domain review — react rule checklist (R1–R7) + bug hunt on the react builder's receipts |
 | `crewplan-nestjs-reviewer` | sonnet · high | **read-only** step-9 domain review — nestjs rule checklist (N1–N8) + bug hunt on the nestjs builder's receipts |
 
-Investigators are cheap/haiku; everything that writes or judges real code is Sonnet. `sonnet`
+Code investigators are cheap/haiku; the web researcher is Sonnet because ranking sources and
+spotting a band-aid "fix" is judgment, and a confident wrong answer about a library API is the
+failure the online wave exists to prevent. Everything that writes or judges real code is Sonnet. `sonnet`
 and `haiku` are aliases that follow each new release, so there is no version to bump. `effort`
 is set explicitly because each Sonnet release recalibrates what a level means: builders and the
 verifier start at `medium` (the documented starting point for agentic coding), reviewers at
 `high` (bug-hunting is the judgment-heavy step). Re-check these when a new Sonnet ships. The
-haiku investigator sets no `effort` — Haiku 4.5 doesn't take one.
+haiku investigator sets no `effort` — it runs at the Haiku default (`medium` on Haiku 5.5), which
+is enough for a read-only locator.
 
 The builders' Definition of Done rejects a check that never exercised the change (syntax-only,
 or a command that failed to start). Current Sonnet models can report work done without a real
@@ -103,6 +107,31 @@ the guard.
   builder wrote/extended for its work, plus typecheck/lint. **E2E is forbidden** — builders
   never write/run/scaffold it. crewplan-shared-contracts-builder's DoD is type-shaped (typecheck green +
   schema unit tests; its "integration" is consumers compiling, checked by `crewplan-contract-verifier`).
+
+## Keeping the harness current
+
+Sources behind the 2026-10 refresh: Anthropic's [multi-agent coordination patterns](https://claude.com/blog/multi-agent-coordination-patterns)
+(2026-04-10), [when to use multi-agent systems](https://claude.com/blog/building-multi-agent-systems-when-and-how-to-use-them)
+(2026-01-23), [harness design for long-running apps](https://www.anthropic.com/engineering/harness-design-long-running-apps)
+(2026-03-24) and the Claude Code [best practices](https://code.claude.com/docs/en/best-practices) page. What
+was adopted, and why:
+
+- **Generator ≠ grader.** Models over-rate their own output; builders never grade themselves —
+  the step-9 agents do, with explicit criteria. A vague "is this good?" verifier approves almost
+  everything.
+- **Done-when agreed before the build** (the harness post's "sprint contract"): each plan step
+  carries green AND red criteria with the command that proves them.
+- **Decompose by context, not by role.** Role-split agents spent more tokens coordinating than
+  working; questions split by context boundary don't.
+- **Early-victory guard**: verifiers run the full gate, not one or two checks; red cases are
+  mandatory.
+- **Reviewers flag only correctness/contract/rule breaks** — a reviewer asked for gaps always
+  reports some, and chasing them over-engineers. Blockers are double-checked before rework.
+- **Online wave** — cached model knowledge of fast-moving APIs is unreliable, and a community fix
+  often already exists.
+- **Re-test components per model release, one at a time.** Each component (investigator wave,
+  verifier, reviewer, broker cap) encodes an assumption about what the model can't do alone;
+  those go stale. Drop one, compare a run, keep it only if quality drops without it.
 
 ## Extending
 

@@ -21,6 +21,7 @@ working unchanged.
 ```
 agents/                                 # spawnable agent personas (bare subagent_type)
   crewplan-investigator.md              #   haiku read-only locator (planning phase)
+  crewplan-web-researcher.md            #   sonnet read-only — live docs / community fixes / prior art (planning phase)
   crewplan-shared-contracts-builder.md  #   sonnet — FE↔BE types/DTO/GraphQL (contract authority)
   crewplan-db-builder.md                #   sonnet — ORM schema/migrations/repositories
   crewplan-nestjs-builder.md            #   sonnet — NestJS modules/services/controllers
@@ -57,8 +58,9 @@ target with `CLAUDE_HOME=/path ./install.sh`.
 
 ## How it works
 
-1. `/crewplan <task>` — decompose → parallel haiku `crewplan-investigator` fan-out → synthesize
-   a plan with a `## Contracts` section (boundary shapes + owners).
+1. `/crewplan <task>` — decompose → parallel haiku `crewplan-investigator` fan-out + a mandatory
+   `crewplan-web-researcher` wave (live docs, community fixes, prior art) → synthesize a plan with
+   `## Research`, `## Contracts` (boundary shapes + owners) and per-step `Done when:` criteria.
 2. After approval, dispatch builders in dependency order
    `shared-contracts → db → nestjs → react` (sequential — they mutate the tree). Each builder
    conforms to its boundary contract or halts with a `deviation:` the orchestrator brokers.
@@ -90,7 +92,7 @@ left dangling by renames. Then restart Claude Code so the agent registry refresh
 ## Uninstall
 
 ```sh
-rm ~/.claude/agents/{crewplan-investigator,crewplan-shared-contracts-builder,crewplan-db-builder,crewplan-nestjs-builder,crewplan-react-builder,crewplan-contract-verifier,crewplan-react-reviewer,crewplan-nestjs-reviewer}.md
+rm ~/.claude/agents/{crewplan-investigator,crewplan-web-researcher,crewplan-shared-contracts-builder,crewplan-db-builder,crewplan-nestjs-builder,crewplan-react-builder,crewplan-contract-verifier,crewplan-react-reviewer,crewplan-nestjs-reviewer}.md
 rm -rf ~/.claude/skills/crewplan
 ```
 (These remove the symlinks only; the repo copies stay.)
