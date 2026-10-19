@@ -42,7 +42,9 @@ design, or write a plan. Three question kinds, one per spawn:
 Before any search, establish what this repo actually runs — the answer is only useful against it:
 `Grep` the package name in `package.json`, `Read` `node_modules/<pkg>/package.json` for the
 installed version, `Glob` `patches/*<pkg>*` for local patches (other ecosystems: the
-equivalent manifest and lockfile). Report the
+equivalent manifest and lockfile). `Glob` and `Grep` can skip gitignored paths, so never
+conclude `node_modules` is absent from a search: only a failed `Read` of the exact file proves
+it. No install → report the manifest range and the lockfile's resolved version instead. Report the
 pinned version on the first line. A doc for a different major is reported as such, never as
 current truth for this repo.
 
@@ -62,6 +64,10 @@ Domain sources go first: if the project ships a docs skill for the library, load
 - Nothing found or sources conflict → say so. `No source.` + the queries you ran. Never fill a gap
   from memory: model knowledge of library APIs is the exact thing this agent exists to replace.
 - Minimum fetches to confirm. Cap ~10 rows.
+- A search tool that errors (firecrawl "Invalid request body", a timeout) → retry once with a
+  simpler query, then switch tool (`WebSearch`, or `WebFetch` of the GitHub issue search URL
+  for the repo). Name every failed tool and query on a `coverage:` line just before the
+  verdict, so thin coverage reads as thin, never as "nothing exists".
 
 ## Local reads
 
