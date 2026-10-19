@@ -23,7 +23,7 @@ roster + rationale.
 | `crewplan-db-builder` | sonnet · medium | ORM schema/entities/migrations/repositories |
 | `crewplan-nestjs-builder` | sonnet · medium | NestJS modules/controllers/services/DTOs |
 | `crewplan-react-builder` | sonnet · medium | React components/hooks/context/query wiring |
-| `crewplan-contract-verifier` | sonnet · medium | **read-only** post-build gate — diffs both sides vs contract + runs typecheck/build |
+| `crewplan-contract-verifier` | sonnet · medium | **read-only** post-build gate — diffs both sides vs contract + re-runs build, lint, tests |
 | `crewplan-react-reviewer` | sonnet · high | **read-only** step-9 domain review — react rule checklist (R1–R7) + bug hunt on the react builder's receipts |
 | `crewplan-nestjs-reviewer` | sonnet · high | **read-only** step-9 domain review — nestjs rule checklist (N1–N8) + bug hunt on the nestjs builder's receipts |
 
@@ -62,12 +62,14 @@ the guard.
 ## Post-build verification (step 9)
 
 - After every builder is `status: done`, spawn `crewplan-contract-verifier` — **one per boundary in
-  parallel** (read-only, no conflict) + **one build-gate** verifier that runs the project
-  typecheck/build once.
+  parallel** (read-only, no conflict) + **one build-gate** verifier that runs typecheck,
+  lint, the full test suite and every step's `Done when:` commands once, against the Step 7
+  baseline — the builders ran them too, but a builder grading itself skews optimistic.
 - Verifier emits `match:` / `mismatch:` / `build-fail:` with a named `fix-owner`
   (`crewplan-shared-contracts-builder (contract)` when the baseline itself is wrong).
 - Any non-match feeds back into the step-8 broker loop, then re-verify the affected boundaries.
-  Loop until `verified: all boundaries match, build green`.
+  Loop until every boundary is `verified: all boundaries in scope match.` and the build-gate
+  is `verified: build-gate green (typecheck, lint, tests, Done-when).`
 - Rationale: a builder can be locally correct while two sides don't line up at the seam. This
   gate is the safety net that catches integration bugs before the feature ships.
 
