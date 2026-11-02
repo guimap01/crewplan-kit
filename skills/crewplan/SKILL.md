@@ -135,7 +135,7 @@ only pay off when context isolation, parallel coverage, or specialization is a r
      agreed BEFORE the build: the green case(s), at least one **red case** (invalid input /
      refused path / flag off must fail or degrade as specified), and the exact command that
      proves each. "Works" is not a criterion. Use the project's documented test-command form
-     (a stray `--` makes some runners run the whole suite), and the check form of anything that
+     (a stray `--` makes some runners run the whole suite; every test command names affected files only), and the check form of anything that
      can write (a lint or format script with `--fix` / `--write` → its check-only variant).
    - `## Verify` — how to test end-to-end.
    - `## Risks` — traps, unknowns, gaps.
@@ -177,16 +177,14 @@ only pay off when context isolation, parallel coverage, or specialization is a r
    ```
 
    Read each builder's receipt; a `status: done` means that step is complete and verified
-   against its **Definition of Done** — green unit + integration tests (no e2e), typecheck &
-   lint. A builder that can't reach green returns `blocked:`/`deviation:` instead, which
+   against its **Definition of Done** — green unit + integration tests in the affected test files (no e2e). No agent runs typecheck, lint, build or a full suite; only the orchestrator runs typecheck and lint. A builder that can't reach green returns `blocked:`/`deviation:` instead, which
    routes into the Step 8 broker loop.
    - **Receipt acceptance rule**: a valid `verified:` line quotes the actual command AND its
-     summary output (e.g. `verified: pnpm test src/party → "Tests: 12 passed"`). A
+     summary output (e.g. `verified: vitest run src/party.test.ts → "Tests: 12 passed"`). A
      `status: done` with a bare pass/fail claim is NOT done — re-request the receipt once,
      then treat the step as `blocked:`.
    - **Before the first dispatch, record a build baseline**: snapshot pre-existing dirty and
-     untracked files (`git status --porcelain`) FIRST, then whether the project's typecheck,
-     check-only lint and full test suite are already green — for each red one, the failing
+     untracked files (`git status --porcelain`) FIRST, then run typecheck and check-only lint YOURSELF (never via an agent, never the full test suite) to learn whether they are already green — for each red one, the failing
      files or rules (a broken check predates your changes) — AND the branch base sha
      (`git merge-base origin/main HEAD`, after `git fetch origin main`) into `## Progress` —
      Step 9 uses all of them so pre-existing failures, user edits and main's newer commits are
@@ -226,15 +224,7 @@ only pay off when context isolation, parallel coverage, or specialization is a r
    - **One `crewplan-contract-verifier` per boundary.** Each is handed one `## Contracts`
      entry + the owning/consuming builder, and diffs both sides' real code field-by-field
      against it.
-   - **Plus one build-gate verifier** (run once, not per boundary — avoid N redundant builds),
-     handed: typecheck, check-only lint, the full test suite, and every plan step's
-     `Done when:` commands (green AND red cases, in the check-only forms from Step 5 — rewrite
-     any that are not before handing them over), plus the Step 7 baseline. The builders ran
-     these already; the gate re-runs them because a builder grading itself skews optimistic.
-     Never hand it a writing command (`--fix`, `--write`, `--apply`) or one with real spend
-     (paid API or model calls). Tests that need a database run only against a local one
-     (loopback host); otherwise they are reported not run. Only failures NOT in the baseline
-     count as breaks — otherwise the broker loop chases pre-existing red it can never fix.
+   - **Then the orchestrator runs the build gate ITSELF, after every gate agent has returned — never delegated to an agent, and never with agents still running:** typecheck and check-only lint once, plus only the test files covering the changed code, plus each plan step's `Done when:` commands (scoped to affected test files, check-only forms). Never the full test suite: CI runs that. Never a writing command (`--fix`, `--write`, `--apply`) or one with real spend. Tests that need a database run only against a local one (loopback host, `DATABASE_URL` otherwise unset); anything else is reported as not run, never as a break. Give long commands a Bash `timeout` of 600000; a timeout is not run, not a break. Compare against the Step 7 baseline: only failures NOT in it count as breaks, otherwise the broker loop chases pre-existing red it can never fix. Name a `fix-owner` for each break and feed it to the broker loop.
    - **Plus one domain reviewer per dispatched domain**: `crewplan-react-reviewer` iff
      `crewplan-react-builder` was dispatched, `crewplan-nestjs-reviewer` iff
      `crewplan-nestjs-builder` was. A builder dispatched only for docs-only steps does not
@@ -256,8 +246,7 @@ only pay off when context isolation, parallel coverage, or specialization is a r
      what EXECUTED, not from what a lookup map CONTAINS.
    - **Plus, per docs-only step**, one `crewplan-investigator` per changed claim in the doc
      (cap ~6 per wave): does the `path:line` it describes say what the new wording says?
-   - Read the verdicts. Green = every boundary `match:` + build-gate green (typecheck, lint,
-     tests, every `Done when:` command) + every spawned reviewer `approved:` + every doc-claim
+   - Read the verdicts. Green = every boundary `match:` + the orchestrator's build gate green (typecheck, lint, affected tests, every `Done when:` command) + every spawned reviewer `approved:` + every doc-claim
      investigator confirming → present the final summary. A doc claim that does not hold goes
      back to that step's builder (same 2-round cap).
    - **The final summary proposes the PR split** and commits nothing: PRs sized to the
@@ -265,22 +254,22 @@ only pay off when context isolation, parallel coverage, or specialization is a r
      dependency order — each PR with its file list and `git diff --stat <base sha>` line counts
      (new files counted with `wc -l`). Commit, push and open PRs only after the user approves
      the split.
-   - Any `mismatch:` or `build-fail:` → feed it straight into the **Step 8 broker loop**: the
+   - Any `mismatch:` or break from your build gate → feed it straight into the **Step 8 broker loop**: the
      verifier already names the `fix-owner` (a consumer builder, `crewplan-shared-contracts-builder
      (contract)` when the baseline itself is wrong, or `orchestrator (contract)` when a
      single-builder seam's recorded fact is wrong). Amend `## Contracts` if the contract was
      wrong, else re-dispatch the drifted builder to conform; then re-run the affected
-     boundaries AND the build-gate (a fix can break an unrelated file no boundary covers).
+     boundaries AND your build gate (a fix can break an unrelated file no boundary covers).
    - Any reviewer `rework:` (blocker/major findings only — minor/nit go in the final summary,
      never a loop) → re-dispatch that domain's builder with the quoted findings, then re-run
-     **that reviewer + the boundary verifiers touching its files + the build-gate** (rework
+     **that reviewer + the boundary verifiers touching its files + your build gate** (rework
      mutates the tree, so prior verdicts on touched boundaries are stale). **Cap: 2 rework
      rounds per domain** — at the cap, stop and surface the remaining findings to the user
      instead of looping.
    - **Double-check before rework.** For every `blocker`/`major`, confirm the quoted line exists
      at that `path:line` in the current tree and the claimed failure follows from it — one
      `crewplan-investigator` per finding (in one parallel message), or, when the claim is a
-     failing command, the build-gate `crewplan-contract-verifier` re-running it. A finding that
+     failing command, the orchestrator re-running it. A finding that
      does not survive is dropped and logged in `## Progress` — never re-dispatch a builder on a
      false positive.
    - **Dedupe before brokering:** an issue flagged both as a verifier `mismatch:` and a
@@ -317,7 +306,7 @@ investigators are haiku.
 
 | Gate agent                  | Verdict vocabulary                          | Role                                              |
 |-----------------------------|---------------------------------------------|---------------------------------------------------|
-| `crewplan-contract-verifier`| `match:` / `mismatch:` / `build-fail:`      | diffs both sides of a boundary vs `## Contracts`  |
+| `crewplan-contract-verifier`| `match:` / `mismatch:`      | diffs both sides of a boundary vs `## Contracts`  |
 | `crewplan-react-reviewer`   | `approved:` / `rework:` + severity findings | react rule checklist (R1–R7) + bug hunt on receipts |
 | `crewplan-nestjs-reviewer`  | `approved:` / `rework:` + severity findings | nestjs rule checklist (N1–N8) + bug hunt on receipts |
 

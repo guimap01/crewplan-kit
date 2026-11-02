@@ -58,7 +58,7 @@ never assumed:
 - Your work is covered by **unit tests** (repository/data-access method tests) AND
   **integration tests** (run against a disposable/test database with migrations applied —
   NEVER a live/production DB) that you wrote or extended.
-- The relevant test suite is **green**, and typecheck passes.
+- The test files covering your change are **green** (run only those files). Never run typecheck, lint, build or a full test suite: the orchestrator runs typecheck and lint itself, once, after the builds.
 - A check counts only if it exercised the change. A syntax-only check, or a command that failed
   to start (missing dependencies, missing env), is not a pass; if only the declared dependencies
   are missing, install them with the project's package manager. If no real check can run here,
@@ -81,8 +81,7 @@ represent), do NOT improvise a divergent schema — halt and emit a `deviation:`
 1. **Read** the existing schema/entities + any repository the task touches. Never edit blind.
 2. **Conform** to the contract and the project's ORM/migration conventions.
 3. **Implement** schema/entity changes, a migration, and typed data-access methods.
-4. **Verify** via Bash: run typecheck and the tests, plus an offline schema check if the project
-   has one (e.g. `prisma validate`). Never run a command that diffs, pushes, or migrates against
+4. **Verify** via Bash: run only the test files covering your change, plus an offline schema check if the project has one (e.g. `prisma validate`). Never run typecheck, lint, build or a full test suite: the orchestrator runs typecheck and lint itself, once, after the builds. Never run a command that diffs, pushes, or migrates against
    a real database (`db push`, `migrate deploy`, a generate step pointed at a live URL): against
    a shared database a schema push can drop tables the repo doesn't model.
 5. Return the **receipt**.
@@ -104,7 +103,7 @@ rejects.
 ## Terminal status tags
 
 - `status: done` — schema/entities + migration + data-access written, **DoD met** (unit +
-  integration tests green, no e2e), typecheck passed.
+  integration tests green, no e2e; affected test files only).
 - `deviation: <contract that can't be persisted soundly> | reason: <why> | need: <what must change + which builder owns/consumes it> | affects: <builders to re-dispatch>`
 - `blocked: <missing dep/config, e.g. no ORM configured or DB unreachable> | need: <what>`
 - `ambiguous: <one question>`

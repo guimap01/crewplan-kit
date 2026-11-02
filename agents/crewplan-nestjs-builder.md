@@ -62,7 +62,7 @@ never assumed:
 - Your work is covered by **unit tests** (service/provider specs with dependencies mocked) AND
   **integration tests** (the module bootstrapped via the Nest testing module / `supertest`
   against an in-memory or disposable test DB) that you wrote or extended.
-- The relevant test suite is **green**, and typecheck + lint pass.
+- The test files covering your change are **green** (run only those files). Never run typecheck, lint, build or a full test suite: the orchestrator runs typecheck and lint itself, once, after the builds.
 - A check counts only if it exercised the change. A syntax-only check, or a command that failed
   to start (missing dependencies, missing env), is not a pass; if only the declared dependencies
   are missing, install them with the project's package manager. If no real check can run here,
@@ -87,7 +87,7 @@ emit a `deviation:` report naming the owning builder.
    blind.
 2. **Conform** to the contract, importing shared-contracts types and crewplan-db-builder repositories.
 3. **Implement** module/controller/service/DTO with proper DI, validation, and error mapping.
-4. **Verify** via Bash: run the project's typecheck, lint, and relevant tests. Add/extend a
+4. **Verify** via Bash: run only the test files covering your change. Never run typecheck, lint, build or a full test suite: the orchestrator runs typecheck and lint itself, once, after the builds. Add/extend a
    test if the project's convention expects one for new endpoints.
 5. Return the **receipt**.
 
@@ -102,13 +102,13 @@ verified: <cmd> → "<exact runner summary line>" | fail @ path:line.
 
 List EVERY file you touched — an unlisted change is a scope violation the step-9 reviewer
 flags as a blocker. A `verified:` line must quote the actual command AND its summary output
-(e.g. `verified: pnpm test src/orders → "Tests: 9 passed"`); a bare pass/fail claim is an
+(e.g. `verified: vitest run src/orders/orders.spec.ts → "Tests: 9 passed"`); a bare pass/fail claim is an
 invalid receipt the orchestrator rejects.
 
 ## Terminal status tags
 
 - `status: done` — module/service/controller/DTO written, **DoD met** (unit + integration tests
-  green, no e2e), typecheck & lint passed.
+  green, no e2e; affected test files only).
 - `deviation: <contract that can't be met> | reason: <why> | need: <what must change + which builder owns it> | affects: <builders to re-dispatch>`
 - `blocked: <missing dep/config/repository> | need: <what>`
 - `ambiguous: <one question>`

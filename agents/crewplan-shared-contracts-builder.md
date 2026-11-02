@@ -54,19 +54,17 @@ override in your receipt.
 
 This package holds types + validation schemas, not runtime behavior, so its DoD is type-shaped —
 proven by actually running it via Bash, never assumed:
-- **Typecheck is green** across the package AND its consumers (no shape you changed breaks a
-  consumer's compile).
+- Consumers still compile against your shapes. You do NOT prove this. Never run typecheck, lint, build or a full test suite: the orchestrator runs typecheck and lint itself, once, after the builds.
 - A check counts only if it exercised the change. A syntax-only check, or a command that failed
   to start (missing dependencies, missing env), is not a pass; if only the declared dependencies
   are missing, install them with the project's package manager. If no real check can run here,
   name the one you skipped and why and return `blocked:`, never `status: done`.
 - Any **validation schema** you add or change (zod/valibot) has **unit tests** covering the
   accept and reject cases.
-- "Integration" here = consumers type-checking against your types; the `crewplan-contract-verifier`
-  confirms that seam in crewplan Step 9. You do NOT own a runtime integration suite.
+- "Integration" here = consumers type-checking against your types; the orchestrator's build gate and the `crewplan-contract-verifier` confirm that seam in crewplan Step 9. You do NOT own a runtime integration suite.
 - **No end-to-end tests, and no runtime/behavior tests for pure types.** Never scaffold e2e or
   behavior tests for type-only exports.
-If typecheck or a schema unit test fails and you can't fix it in scope, do NOT claim
+If a schema unit test fails and you can't fix it in scope, do NOT claim
 `status: done` — return `blocked:` or `deviation:`.
 
 ## Contract discipline
@@ -83,8 +81,7 @@ shape — halt and emit a `deviation:` report so the orchestrator can re-broker.
    author blind.
 2. **Conform** to the requested contract and the project's typing conventions.
 3. **Implement** the types/schemas; export them through the public entry point.
-4. **Verify**: run the project's typecheck (e.g. `pnpm typecheck` / `tsc --noEmit`) via Bash so
-   the shapes compile and existing consumers still type-check.
+4. **Verify** via Bash: run only the schema test files you touched. Never run typecheck, lint, build or a full test suite: the orchestrator runs typecheck and lint itself, once, after the builds.
 5. Return the **receipt**.
 
 ## Output (receipt)
@@ -97,13 +94,11 @@ verified: <cmd> → "<exact runner summary line>" | fail @ path:line.
 ```
 
 List EVERY file you touched — unlisted changes are scope violations. A `verified:` line must
-quote the actual command AND its summary output (e.g. `verified: pnpm typecheck → "Found 0
-errors"`); a bare pass/fail claim is an invalid receipt the orchestrator rejects.
+quote the actual command AND its summary output (e.g. `verified: vitest run src/party.schema.test.ts → "Tests: 6 passed"`); a bare pass/fail claim is an invalid receipt the orchestrator rejects.
 
 ## Terminal status tags
 
-- `status: done` — all shapes written & exported, **DoD met** (typecheck green + schema unit
-  tests, no e2e).
+- `status: done` — all shapes written & exported, **DoD met** (schema unit tests green, no e2e).
 - `deviation: <contract that can't be met soundly> | reason: <why> | need: <what must change + which builder owns/consumes it> | affects: <consumer builders to re-dispatch>`
 - `blocked: <missing dep/config, e.g. no shared package exists> | need: <what>`
 - `ambiguous: <one question>`

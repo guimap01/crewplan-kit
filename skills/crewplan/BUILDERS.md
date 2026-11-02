@@ -23,7 +23,7 @@ roster + rationale.
 | `crewplan-db-builder` | sonnet · medium | ORM schema/entities/migrations/repositories |
 | `crewplan-nestjs-builder` | sonnet · medium | NestJS modules/controllers/services/DTOs |
 | `crewplan-react-builder` | sonnet · medium | React components/hooks/context/query wiring |
-| `crewplan-contract-verifier` | sonnet · medium | **read-only** post-build gate — diffs both sides vs contract + re-runs build, lint, tests |
+| `crewplan-contract-verifier` | sonnet · medium | **read-only** post-build gate — diffs both sides vs contract; runs no checks |
 | `crewplan-react-reviewer` | sonnet · high | **read-only** step-9 domain review — react rule checklist (R1–R7) + bug hunt on the react builder's receipts |
 | `crewplan-nestjs-reviewer` | sonnet · high | **read-only** step-9 domain review — nestjs rule checklist (N1–N8) + bug hunt on the nestjs builder's receipts |
 
@@ -62,14 +62,11 @@ the guard.
 ## Post-build verification (step 9)
 
 - After every builder is `status: done`, spawn `crewplan-contract-verifier` — **one per boundary in
-  parallel** (read-only, no conflict) + **one build-gate** verifier that runs typecheck,
-  lint, the full test suite and every step's `Done when:` commands once, against the Step 7
-  baseline — the builders ran them too, but a builder grading itself skews optimistic.
-- Verifier emits `match:` / `mismatch:` / `build-fail:` with a named `fix-owner`
+  parallel** (read-only, no conflict); then the orchestrator itself (never an agent) runs typecheck, lint, the affected test files and every step's `Done when:` commands once, against the Step 7 baseline.
+- Verifier emits `match:` / `mismatch:` with a named `fix-owner`
   (`crewplan-shared-contracts-builder (contract)` when the baseline itself is wrong).
 - Any non-match feeds back into the step-8 broker loop, then re-verify the affected boundaries.
-  Loop until every boundary is `verified: all boundaries in scope match.` and the build-gate
-  is `verified: build-gate green (typecheck, lint, tests, Done-when).`
+  Loop until every boundary is `verified: all boundaries in scope match.` and the orchestrator's build gate is green.
 - Rationale: a builder can be locally correct while two sides don't line up at the seam. This
   gate is the safety net that catches integration bugs before the feature ships.
 
@@ -86,7 +83,7 @@ the guard.
   evidence is dropped), and the reviewer must emit a **per-rule checklist verdict even when
   clean** — `approved:` without the checklist is invalid.
 - **Rework cap: 2 rounds per domain**, then remaining findings are surfaced to the user instead
-  of looping. After any rework, the affected boundary verifiers + build-gate re-run (the tree
+  of looping. After any rework, the affected boundary verifiers and the orchestrator's build gate re-run (the tree
   changed; old verdicts are stale).
 - A reviewer `contract-conflict:` (correct fix would violate `## Contracts`) routes to
   `crewplan-shared-contracts-builder (contract)` — same brokering as a verifier `mismatch:` of
@@ -104,11 +101,10 @@ the guard.
 - **Detect, don't impose**: use whatever the target project already depends on (react-query vs
   apollo, Prisma vs TypeORM vs Drizzle) — never introduce a new library.
 - Write real code normally (never caveman in source); return a terse receipt ending in a
-  terminal status tag; self-verify via Bash (typecheck/lint/test) before returning.
+  terminal status tag; self-verify via Bash by running only the affected test files before returning; never typecheck, lint, build or a full suite.
 - **Definition of Done**: `status: done` requires green **unit + integration** tests the
-  builder wrote/extended for its work, plus typecheck/lint. **E2E is forbidden** — builders
-  never write/run/scaffold it. crewplan-shared-contracts-builder's DoD is type-shaped (typecheck green +
-  schema unit tests; its "integration" is consumers compiling, checked by `crewplan-contract-verifier`).
+  builder wrote/extended for its work (affected files only); typecheck/lint are run by the orchestrator. **E2E is forbidden** — builders
+  never write/run/scaffold it. crewplan-shared-contracts-builder's DoD is schema unit tests; consumers compiling is checked by the orchestrator's typecheck.
 
 ## Keeping the harness current
 
