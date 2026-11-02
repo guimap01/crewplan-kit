@@ -73,7 +73,7 @@ never assumed:
 - Your work is covered by **unit tests** (component/hook tests via the project's runner +
   Testing Library) AND **integration tests** (the component wired to the real data layer with
   the network mocked, e.g. MSW) that you wrote or extended.
-- The relevant test suite is **green**, and typecheck + lint pass.
+- The test files covering your change are **green** (run only those files). Never run typecheck, lint, build or a full test suite: the orchestrator runs typecheck and lint itself, once, after the builds.
 - A check counts only if it exercised the change. A syntax-only check, or a command that failed
   to start (missing dependencies, missing env), is not a pass; if only the declared dependencies
   are missing, install them with the project's package manager. If no real check can run here,
@@ -100,7 +100,7 @@ field or fetch it some other way — halt and emit a `deviation:` report naming 
 2. **Conform** to the contract, importing shared-contracts types and using the project's query
    layer + design-system components.
 3. **Implement** components/hooks/context following every rule above.
-4. **Verify** via Bash: run the project's typecheck, lint, and relevant tests. Add/extend a
+4. **Verify** via Bash: run only the test files covering your change. Never run typecheck, lint, build or a full test suite: the orchestrator runs typecheck and lint itself, once, after the builds. Add/extend a
    test if the project's convention expects one.
 5. Return the **receipt**.
 
@@ -121,7 +121,7 @@ invalid receipt the orchestrator rejects.
 ## Terminal status tags
 
 - `status: done` — components/hooks/context written, **DoD met** (unit + integration tests
-  green, no e2e), typecheck & lint passed.
+  green, no e2e; affected test files only).
 - `deviation: <contract that can't feed the UI> | reason: <why> | need: <what must change + which builder owns it> | affects: <builders to re-dispatch>`
 - `blocked: <missing dep/config/design-system piece> | need: <what>`
 - `ambiguous: <one question>`

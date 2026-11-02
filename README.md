@@ -65,7 +65,7 @@ target with `CLAUDE_HOME=/path ./install.sh`.
    `shared-contracts → db → nestjs → react` (sequential — they mutate the tree). Each builder
    conforms to its boundary contract or halts with a `deviation:` the orchestrator brokers.
 3. Post-build gate (one parallel read-only wave): `crewplan-contract-verifier` diffs both sides
-   of each boundary against the contract + runs typecheck/build, while
+   of each boundary against the contract, while
    `crewplan-react-reviewer` / `crewplan-nestjs-reviewer` audit each dispatched builder's
    receipts against its domain rule checklist (quoted evidence per finding, checklist verdict
    even when clean). Mismatches and blocker/major findings loop back into the broker —
