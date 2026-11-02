@@ -180,7 +180,7 @@ only pay off when context isolation, parallel coverage, or specialization is a r
    against its **Definition of Done** — green unit + integration tests in the affected test files (no e2e). No agent runs typecheck, lint, build or a full suite; only the orchestrator runs typecheck and lint. A builder that can't reach green returns `blocked:`/`deviation:` instead, which
    routes into the Step 8 broker loop.
    - **Receipt acceptance rule**: a valid `verified:` line quotes the actual command AND its
-     summary output (e.g. `verified: pnpm test src/party → "Tests: 12 passed"`). A
+     summary output (e.g. `verified: vitest run src/party.test.ts → "Tests: 12 passed"`). A
      `status: done` with a bare pass/fail claim is NOT done — re-request the receipt once,
      then treat the step as `blocked:`.
    - **Before the first dispatch, record a build baseline**: snapshot pre-existing dirty and
@@ -224,7 +224,7 @@ only pay off when context isolation, parallel coverage, or specialization is a r
    - **One `crewplan-contract-verifier` per boundary.** Each is handed one `## Contracts`
      entry + the owning/consuming builder, and diffs both sides' real code field-by-field
      against it.
-   - **Then the orchestrator runs the build gate ITSELF, after every gate agent has returned — never delegated to an agent, and never with agents still running:** typecheck and check-only lint once, plus only the test files covering the changed code, plus each plan step's `Done when:` commands (scoped to affected test files, check-only forms). Never the full test suite: CI runs that. Never a writing command (`--fix`, `--write`, `--apply`) or one with real spend. Compare against the Step 7 baseline: only failures NOT in it count as breaks, otherwise the broker loop chases pre-existing red it can never fix. Name a `fix-owner` for each break and feed it to the broker loop.
+   - **Then the orchestrator runs the build gate ITSELF, after every gate agent has returned — never delegated to an agent, and never with agents still running:** typecheck and check-only lint once, plus only the test files covering the changed code, plus each plan step's `Done when:` commands (scoped to affected test files, check-only forms). Never the full test suite: CI runs that. Never a writing command (`--fix`, `--write`, `--apply`) or one with real spend. Tests that need a database run only against a local one (loopback host, `DATABASE_URL` otherwise unset); anything else is reported as not run, never as a break. Give long commands a Bash `timeout` of 600000; a timeout is not run, not a break. Compare against the Step 7 baseline: only failures NOT in it count as breaks, otherwise the broker loop chases pre-existing red it can never fix. Name a `fix-owner` for each break and feed it to the broker loop.
    - **Plus one domain reviewer per dispatched domain**: `crewplan-react-reviewer` iff
      `crewplan-react-builder` was dispatched, `crewplan-nestjs-reviewer` iff
      `crewplan-nestjs-builder` was. A builder dispatched only for docs-only steps does not

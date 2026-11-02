@@ -115,7 +115,7 @@ verified: <cmd> → "<exact runner summary line>" | fail @ path:line.
 
 List EVERY file you touched — an unlisted change is a scope violation the step-9 reviewer
 flags as a blocker. A `verified:` line must quote the actual command AND its summary output
-(e.g. `verified: pnpm test src/cart → "Tests: 12 passed"`); a bare pass/fail claim is an
+(e.g. `verified: vitest run src/cart.test.tsx → "Tests: 12 passed"`); a bare pass/fail claim is an
 invalid receipt the orchestrator rejects.
 
 ## Terminal status tags

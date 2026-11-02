@@ -81,8 +81,7 @@ represent), do NOT improvise a divergent schema — halt and emit a `deviation:`
 1. **Read** the existing schema/entities + any repository the task touches. Never edit blind.
 2. **Conform** to the contract and the project's ORM/migration conventions.
 3. **Implement** schema/entity changes, a migration, and typed data-access methods.
-4. **Verify** via Bash: run only the test files covering your change (Never run typecheck, lint, build or a full test suite: the orchestrator runs typecheck and lint itself, once, after the builds.), plus an offline schema check if the project
-   has one (e.g. `prisma validate`). Never run a command that diffs, pushes, or migrates against
+4. **Verify** via Bash: run only the test files covering your change, plus an offline schema check if the project has one (e.g. `prisma validate`). Never run typecheck, lint, build or a full test suite: the orchestrator runs typecheck and lint itself, once, after the builds. Never run a command that diffs, pushes, or migrates against
    a real database (`db push`, `migrate deploy`, a generate step pointed at a live URL): against
    a shared database a schema push can drop tables the repo doesn't model.
 5. Return the **receipt**.

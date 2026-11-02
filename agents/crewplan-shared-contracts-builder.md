@@ -54,7 +54,7 @@ override in your receipt.
 
 This package holds types + validation schemas, not runtime behavior, so its DoD is type-shaped —
 proven by actually running it via Bash, never assumed:
-- Consumers still compile against your shapes. You do NOT prove this: Never run typecheck, lint, build or a full test suite: the orchestrator runs typecheck and lint itself, once, after the builds.
+- Consumers still compile against your shapes. You do NOT prove this. Never run typecheck, lint, build or a full test suite: the orchestrator runs typecheck and lint itself, once, after the builds.
 - A check counts only if it exercised the change. A syntax-only check, or a command that failed
   to start (missing dependencies, missing env), is not a pass; if only the declared dependencies
   are missing, install them with the project's package manager. If no real check can run here,
@@ -94,7 +94,7 @@ verified: <cmd> → "<exact runner summary line>" | fail @ path:line.
 ```
 
 List EVERY file you touched — unlisted changes are scope violations. A `verified:` line must
-quote the actual command AND its summary output (e.g. `verified: pnpm test src/party.schema → "Tests: 6 passed"`); a bare pass/fail claim is an invalid receipt the orchestrator rejects.
+quote the actual command AND its summary output (e.g. `verified: vitest run src/party.schema.test.ts → "Tests: 6 passed"`); a bare pass/fail claim is an invalid receipt the orchestrator rejects.
 
 ## Terminal status tags
 

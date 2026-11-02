@@ -62,7 +62,7 @@ the guard.
 ## Post-build verification (step 9)
 
 - After every builder is `status: done`, spawn `crewplan-contract-verifier` — **one per boundary in
-  parallel** (read-only, no conflict) ; then the orchestrator itself (never an agent) runs typecheck, lint, the affected test files and every step's `Done when:` commands once, against the Step 7 baseline.
+  parallel** (read-only, no conflict); then the orchestrator itself (never an agent) runs typecheck, lint, the affected test files and every step's `Done when:` commands once, against the Step 7 baseline.
 - Verifier emits `match:` / `mismatch:` with a named `fix-owner`
   (`crewplan-shared-contracts-builder (contract)` when the baseline itself is wrong).
 - Any non-match feeds back into the step-8 broker loop, then re-verify the affected boundaries.
